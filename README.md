@@ -1,59 +1,28 @@
 # AirTable
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.6.
+The goal of Air Table is to provide a simple yet configurable data table that uses the most modern angular features
 
-## Development server
+## Features
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Modern Angular 20 standalone component using signals and new template syntax (@for/@if)
+- Strongly-typed column definitions (`key`, `header`, `sortable`, `filterable`, `cellTemplate`)
+- Internal sorting (asc/desc/none), including Date and numeric handling
+- Global search (internal) across all visible columns
+- External controls support:
+  - External search query via input
+  - External filter function `(row: T) => boolean`
+  - "Apply" pattern example (pending vs applied state)
+- Row selection:
+  - Selection modes: `none`, `single`, `multiple`
+  - Header select-all with indeterminate state (multiple mode)
+  - Select/Deselect All buttons above the table
+  - Emits `selectionChange` with selected rows
+  - Controlled selection via `selectedRows` and custom `rowIdentifier`
+  - Selection count: "X of Y selected" (current selected vs total rows)
+- Column visibility:
+  - Column picker dropdown to toggle column visibility
+  - Table renders only `visibleColumns()`; empty state colspans adjust accordingly
+- Custom cell templates per column via `cellTemplate`
+- Nested property access for column keys (e.g., `user.profile.name`)
+- Responsive, accessible UI with keyboard/focus-friendly controls
+- Example data and multiple demos in `App` (internal controls, external controls, apply-button pattern, selection)

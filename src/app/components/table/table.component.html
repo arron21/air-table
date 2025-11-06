@@ -1,0 +1,188 @@
+<div class="table-container">
+  @if (!isExternalControlActive()) {
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search across all columns..."
+          [value]="searchQuery()"
+          (input)="onSearchChange($any($event.target).value)"
+        />
+        @if (searchQuery()) {
+          <button
+            type="button"
+            class="clear-button"
+            (click)="clearSearch()"
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        }
+      </div>
+      @if (searchQuery()) {
+        <div class="search-results">
+          Showing {{ filteredAndSortedData().length }} of {{ data().length }} results
+        </div>
+      }
+    </div>
+  }
+  @if (selectionMode() === 'multiple') {
+    <div class="selection-controls">
+      <div class="selection-actions">
+        <button
+          type="button"
+          class="select-all-button"
+          (click)="selectAll()"
+          [disabled]="filteredAndSortedData().length === 0"
+        >
+          Select All
+        </button>
+        <button
+          type="button"
+          class="deselect-all-button"
+          (click)="deselectAll()"
+          [disabled]="effectiveSelectedRows().size === 0"
+        >
+          Deselect All
+        </button>
+      </div>
+      <div class="selection-count">
+        {{ totalSelectedCount() }} of {{ data().length }} selected
+      </div>
+    </div>
+  }
+  <div class="table-toolbar">
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-right" style="position: relative;">
+      <button
+        type="button"
+        class="column-picker-button"
+        (click)="toggleColumnPicker()"
+        aria-label="Toggle column visibility"
+        [attr.aria-expanded]="showColumnPicker()"
+      >
+        <span class="column-picker-icon">⚙</span>
+        Columns
+      </button>
+      @if (showColumnPicker()) {
+        <div class="column-picker-dropdown">
+      <div class="column-picker-header">
+        <h3>Toggle Columns</h3>
+        <button
+          type="button"
+          class="close-picker-button"
+          (click)="closeColumnPicker()"
+          aria-label="Close column picker"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="column-picker-list">
+        @for (column of columns(); track column.key) {
+          <label class="column-picker-item">
+            <input
+              type="checkbox"
+              [checked]="isColumnVisible(column.key)"
+              (change)="toggleColumnVisibility(column.key)"
+            />
+            <span>{{ column.header }}</span>
+          </label>
+        }
+      </div>
+      </div>
+      }
+    </div>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        @if (selectionMode() !== 'none') {
+          <th class="selection-header">
+            @if (selectionMode() === 'multiple') {
+              <input
+                type="checkbox"
+                class="select-all-checkbox"
+                [checked]="isAllSelected()"
+                [attr.indeterminate]="isIndeterminate()"
+                (change)="toggleSelectAll()"
+                aria-label="Select all rows"
+              />
+            } @else {
+              <span class="selection-header-text">Select</span>
+            }
+          </th>
+        }
+        @for (column of visibleColumns(); track column.key) {
+          <th
+            [class.sortable]="column.sortable"
+            [class.sorted]="isSorted(column)"
+            (click)="onSort(column)"
+          >
+            <span class="header-content">
+              {{ column.header }}
+              @if (column.sortable) {
+                <span class="sort-icon" [class.active]="isSorted(column)">
+                  {{ sortIcon(column) }}
+                </span>
+              }
+            </span>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @if (filteredAndSortedData().length === 0) {
+        <tr>
+          <td [attr.colspan]="(selectionMode() !== 'none' ? 1 : 0) + visibleColumns().length" class="empty-message">
+            @if (effectiveSearchQuery()) {
+              No results found for "{{ effectiveSearchQuery() }}"
+            } @else {
+              No data available
+            }
+          </td>
+        </tr>
+      } @else {
+        @for (row of filteredAndSortedData(); track getRowId(row)) {
+          <tr [class.selected]="isRowSelected(row)">
+            @if (selectionMode() !== 'none') {
+              <td class="selection-cell">
+                @if (selectionMode() === 'multiple') {
+                  <input
+                    type="checkbox"
+                    class="row-checkbox"
+                    [checked]="isRowSelected(row)"
+                    (change)="toggleRowSelection(row)"
+                    [attr.aria-label]="'Select row ' + getRowId(row)"
+                  />
+                } @else {
+                  <input
+                    type="radio"
+                    class="row-radio"
+                    [checked]="isRowSelected(row)"
+                    (change)="toggleRowSelection(row)"
+                    name="table-row-selection"
+                    [attr.aria-label]="'Select row ' + getRowId(row)"
+                  />
+                }
+              </td>
+            }
+            @for (column of visibleColumns(); track column.key) {
+              <td>
+                @if (column.cellTemplate) {
+                  <ng-container
+                    *ngTemplateOutlet="column.cellTemplate; context: { $implicit: row, column: column }"
+                  ></ng-container>
+                } @else {
+                  {{ getCellValue(row, column) }}
+                }
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
