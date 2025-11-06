@@ -1,29 +1,45 @@
 <div class="table-container">
   @if (!isExternalControlActive()) {
     <div class="search-container">
-      <div class="search-input-wrapper">
-        <span class="search-icon">🔍</span>
-        <input
-          type="text"
-          class="search-input"
-          placeholder="Search across all columns..."
-          [value]="searchQuery()"
-          (input)="onSearchChange($any($event.target).value)"
-        />
-        @if (searchQuery()) {
-          <button
-            type="button"
-            class="clear-button"
-            (click)="clearSearch()"
-            aria-label="Clear search"
-          >
-            ✕
-          </button>
-        }
+      <div class="search-controls">
+        <select
+          class="search-column-select"
+          [value]="searchColumn() ?? ''"
+          (change)="onSearchColumnChange($any($event.target).value)"
+          aria-label="Select column to search"
+        >
+          <option value="">All Columns</option>
+          @for (column of columns(); track column.key) {
+            <option [value]="String(column.key)">{{ column.header }}</option>
+          }
+        </select>
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="search-input"
+            [placeholder]="searchPlaceholder()"
+            [value]="searchQuery()"
+            (input)="onSearchChange($any($event.target).value)"
+          />
+          @if (searchQuery()) {
+            <button
+              type="button"
+              class="clear-button"
+              (click)="clearSearch()"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          }
+        </div>
       </div>
       @if (searchQuery()) {
         <div class="search-results">
           Showing {{ filteredAndSortedData().length }} of {{ data().length }} results
+          @if (selectedColumnHeader()) {
+            <span class="search-column-badge">in {{ selectedColumnHeader() }}</span>
+          }
         </div>
       }
     </div>

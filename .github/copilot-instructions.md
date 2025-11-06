@@ -9,8 +9,9 @@ This is a modern Angular 20 standalone application showcasing a configurable dat
 - **Location**: `src/app/components/table/`
 - **Generic component** supporting any data type via `ColumnDefinition<T>`
 - **Dual control modes**: Internal controls (built-in search/filter) vs External controls (parent-managed)
+- **Column-specific search**: Dropdown to search across all columns or filter by specific column
 - **Selection patterns**: `none`, `single`, `multiple` with controlled/uncontrolled state
-- **Column visibility**: Dynamic show/hide with picker dropdown
+- **Column visibility & ordering**: Dynamic show/hide with drag-and-drop reordering in picker dropdown
 
 ### Signal-Based State Management
 The project exclusively uses Angular signals for state management:
@@ -98,5 +99,7 @@ src/app/
 - **Custom cell templates**: Use `cellTemplate` property with `TemplateRef`
 - **External filtering**: Implement `(row: T) => boolean` function and pass to `externalFilter`
 - **Selection handling**: Listen to `selectionChange` output and manage parent state
+- **Column reordering**: Use drag-and-drop in column picker - order persists via `columnOrder` signal
+- **Column-specific search**: Set `searchColumn` signal to filter by specific column key
 
 When extending this table component, maintain the signal-based architecture and dual control mode pattern for maximum flexibility.

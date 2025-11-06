@@ -31,6 +31,7 @@ export class TableComponent<T = any> {
 
   // Internal search (used when externalSearchQuery is not provided)
   searchQuery = signal<string>('');
+  searchColumn = signal<string | null>(null); // null means search all columns
   private sortColumn = signal<keyof T | string | null>(null);
   private sortDirection = signal<SortDirection>(null);
   
@@ -232,13 +233,33 @@ export class TableComponent<T = any> {
   }
 
   private matchesSearch(row: T, query: string): boolean {
-    // Search across all columns
+    const selectedColumnKey = this.searchColumn();
+    const selectedColumnObj = this.selectedColumn();
+
+    // If a specific column is selected, search only in that column
+    if (selectedColumnKey !== null && selectedColumnObj) {
+      const value = this.getNestedValue(row, selectedColumnObj.key);
+      if (value === null || value === undefined) {
+        return false;
+      }
+
+      let searchValue: string;
+      if (value instanceof Date) {
+        searchValue = value.toLocaleDateString().toLowerCase();
+      } else {
+        searchValue = String(value).toLowerCase();
+      }
+
+      return searchValue.includes(query);
+    }
+
+    // Otherwise, search across all columns
     return this.columns().some(column => {
       const value = this.getNestedValue(row, column.key);
       if (value === null || value === undefined) {
         return false;
       }
-      
+
       // Convert value to string for searching
       let searchValue: string;
       if (value instanceof Date) {
@@ -246,7 +267,7 @@ export class TableComponent<T = any> {
       } else {
         searchValue = String(value).toLowerCase();
       }
-      
+
       return searchValue.includes(query);
     });
   }
@@ -258,6 +279,35 @@ export class TableComponent<T = any> {
   clearSearch(): void {
     this.searchQuery.set('');
   }
+
+  onSearchColumnChange(columnKey: string | null): void {
+    if (columnKey === null || columnKey === '') {
+      this.searchColumn.set(null);
+      return;
+    }
+    const columns = this.columns();
+    const isValidKey = columns.some(col => String(col.key) === columnKey);
+    this.searchColumn.set(isValidKey ? columnKey : null);
+  }
+
+  // Cache the selected column object for search/filter and display
+  protected readonly selectedColumn = computed(() => {
+    const selectedCol = this.searchColumn();
+    if (!selectedCol) return null;
+    return this.columns().find(c => String(c.key) === selectedCol) ?? null;
+  });
+
+  // Get the selected column header for display
+  protected readonly selectedColumnHeader = computed(() => {
+    const column = this.selectedColumn();
+    return column?.header ?? null;
+  });
+
+  // Get the search placeholder text
+  protected readonly searchPlaceholder = computed(() => {
+    const colHeader = this.selectedColumnHeader();
+    return colHeader ? `Search in ${colHeader}...` : 'Search across all columns...';
+  });
 
   // Computed to determine if external controls are active
   protected readonly isExternalControlActive = computed(() => {
