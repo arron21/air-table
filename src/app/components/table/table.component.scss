@@ -147,7 +147,10 @@
   color: var(--table-muted-color);
 }
 
-.column-picker-list { padding: 6px; }
+.column-picker-list { 
+  padding: 6px;
+}
+
 .column-picker-item { 
   display: flex; 
   align-items: center; 
@@ -155,16 +158,46 @@
   padding: 6px;
   cursor: grab;
   border-radius: 4px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.2s ease;
   user-select: none;
+  position: relative;
   
   &:hover {
     background-color: var(--table-row-hover-bg);
   }
   
   &.dragging {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: grabbing;
+  }
+  
+  // Drop indicator - blue line before or after the item
+  &.drop-before::before,
+  &.drop-after::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--table-selected-row-accent);
+    z-index: 1;
+  }
+  
+  &.drop-before::before {
+    top: -1px;
+  }
+  
+  &.drop-after::after {
+    bottom: -1px;
+  }
+  
+  // Subtle push effect when hovering over drop target
+  &.drop-before:not(.dragging) {
+    transform: translateY(2px);
+  }
+  
+  &.drop-after:not(.dragging) {
+    transform: translateY(-2px);
   }
   
   input[type="checkbox"] {

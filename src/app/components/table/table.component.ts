@@ -44,6 +44,7 @@ export class TableComponent<T = any> {
   // Column order state
   private columnOrder = signal<string[]>([]);
   protected draggedColumnIndex = signal<number | null>(null);
+  protected dragOverColumnIndex = signal<number | null>(null);
   
   // Get effective selected rows (external or internal)
   protected readonly effectiveSelectedRows = computed<Set<any>>(() => {
@@ -514,10 +515,31 @@ export class TableComponent<T = any> {
     }
   }
 
-  protected onDragOver(event: DragEvent): void {
+  protected onDragOver(event: DragEvent, index: number): void {
     event.preventDefault();
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move';
+    }
+    
+    const dragIndex = this.draggedColumnIndex();
+    if (dragIndex !== null && dragIndex !== index) {
+      this.dragOverColumnIndex.set(index);
+    }
+  }
+
+  protected onDragEnter(event: DragEvent, index: number): void {
+    event.preventDefault();
+    const dragIndex = this.draggedColumnIndex();
+    if (dragIndex !== null && dragIndex !== index) {
+      this.dragOverColumnIndex.set(index);
+    }
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    // Only clear if we're leaving the container entirely
+    const relatedTarget = event.relatedTarget as HTMLElement;
+    if (!relatedTarget || !relatedTarget.classList.contains('column-picker-item')) {
+      this.dragOverColumnIndex.set(null);
     }
   }
 
@@ -527,6 +549,7 @@ export class TableComponent<T = any> {
     
     if (dragIndex === null || dragIndex === dropIndex) {
       this.draggedColumnIndex.set(null);
+      this.dragOverColumnIndex.set(null);
       return;
     }
 
@@ -536,9 +559,27 @@ export class TableComponent<T = any> {
     
     this.columnOrder.set(currentOrder);
     this.draggedColumnIndex.set(null);
+    this.dragOverColumnIndex.set(null);
   }
 
   protected onDragEnd(): void {
     this.draggedColumnIndex.set(null);
+    this.dragOverColumnIndex.set(null);
+  }
+
+  protected shouldShowDropIndicator(index: number): 'before' | 'after' | null {
+    const dragIndex = this.draggedColumnIndex();
+    const overIndex = this.dragOverColumnIndex();
+    
+    if (dragIndex === null || overIndex === null || dragIndex === overIndex) {
+      return null;
+    }
+    
+    // Show indicator based on drag direction
+    if (overIndex === index) {
+      return dragIndex < overIndex ? 'after' : 'before';
+    }
+    
+    return null;
   }
 }

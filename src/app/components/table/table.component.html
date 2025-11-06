@@ -84,9 +84,13 @@
           <label 
             class="column-picker-item"
             [class.dragging]="draggedColumnIndex() === idx"
+            [class.drop-before]="shouldShowDropIndicator(idx) === 'before'"
+            [class.drop-after]="shouldShowDropIndicator(idx) === 'after'"
             draggable="true"
             (dragstart)="onDragStart($event, idx)"
-            (dragover)="onDragOver($event)"
+            (dragover)="onDragOver($event, idx)"
+            (dragenter)="onDragEnter($event, idx)"
+            (dragleave)="onDragLeave($event)"
             (drop)="onDrop($event, idx)"
             (dragend)="onDragEnd()"
           >
