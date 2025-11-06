@@ -10,7 +10,7 @@
         >
           <option value="">All Columns</option>
           @for (column of columns(); track column.key) {
-            <option [value]="String(column.key)">{{ column.header }}</option>
+            <option [value]="column.key">{{ column.header }}</option>
           }
         </select>
         <div class="search-input-wrapper">
