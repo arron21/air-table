@@ -41,6 +41,10 @@ export class TableComponent<T = any> {
   private columnVisibility = signal<Map<string, boolean>>(new Map());
   protected readonly showColumnPicker = signal<boolean>(false);
   
+  // Column order state
+  private columnOrder = signal<string[]>([]);
+  protected draggedColumnIndex = signal<number | null>(null);
+  
   // Get effective selected rows (external or internal)
   protected readonly effectiveSelectedRows = computed<Set<any>>(() => {
     const external = this.selectedRows();
@@ -60,9 +64,28 @@ export class TableComponent<T = any> {
   protected readonly visibleColumns = computed<ColumnDefinition<T>[]>(() => {
     const allColumns = this.columns();
     const visibility = this.columnVisibility();
+    const order = this.columnOrder();
 
+    // Apply order if it exists, otherwise use original order
+    let orderedColumns = allColumns;
+    if (order.length > 0) {
+      orderedColumns = [];
+      // First add columns in the specified order
+      order.forEach(key => {
+        const col = allColumns.find(c => String(c.key) === key);
+        if (col) {
+          orderedColumns.push(col);
+        }
+      });
+      // Then add any columns not in the order list (for newly added columns)
+      allColumns.forEach(col => {
+        if (!order.includes(String(col.key))) {
+          orderedColumns.push(col);
+        }
+      });
+    }
     
-    return allColumns.filter(col => {
+    return orderedColumns.filter(col => {
       const isVisible = visibility.get(String(col.key)) ?? true;
       return isVisible;
     });
@@ -135,8 +158,10 @@ export class TableComponent<T = any> {
     effect(() => {
       const allColumns = this.columns();
       const visibility = this.columnVisibility();
+      const order = this.columnOrder();
       console.log(this.visibleColumns());
-          // Initialize visibility map if needed
+      
+      // Initialize visibility map if needed
       const needsInit = allColumns.some(col => !visibility.has(String(col.key)));
       if (needsInit) {
         const newVisibility = new Map(visibility);
@@ -146,6 +171,11 @@ export class TableComponent<T = any> {
           }
         });
         this.columnVisibility.set(newVisibility);
+      }
+      
+      // Initialize column order if needed
+      if (order.length === 0 && allColumns.length > 0) {
+        this.columnOrder.set(allColumns.map(col => String(col.key)));
       }
     });
   }
@@ -447,5 +477,68 @@ export class TableComponent<T = any> {
   protected closeColumnPicker(): void {
     this.showColumnPicker.set(false);
   }
-}
 
+  // Get columns ordered for display in picker
+  protected readonly orderedColumns = computed<ColumnDefinition<T>[]>(() => {
+    const allColumns = this.columns();
+    const order = this.columnOrder();
+
+    if (order.length === 0) {
+      return allColumns;
+    }
+
+    const ordered: ColumnDefinition<T>[] = [];
+    // Add columns in the specified order
+    order.forEach(key => {
+      const col = allColumns.find(c => String(c.key) === key);
+      if (col) {
+        ordered.push(col);
+      }
+    });
+    // Add any columns not in the order list
+    allColumns.forEach(col => {
+      if (!order.includes(String(col.key))) {
+        ordered.push(col);
+      }
+    });
+
+    return ordered;
+  });
+
+  // Drag and drop methods for column reordering
+  protected onDragStart(event: DragEvent, index: number): void {
+    this.draggedColumnIndex.set(index);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/html', ''); // Required for Firefox
+    }
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  protected onDrop(event: DragEvent, dropIndex: number): void {
+    event.preventDefault();
+    const dragIndex = this.draggedColumnIndex();
+    
+    if (dragIndex === null || dragIndex === dropIndex) {
+      this.draggedColumnIndex.set(null);
+      return;
+    }
+
+    const currentOrder = [...this.columnOrder()];
+    const [movedItem] = currentOrder.splice(dragIndex, 1);
+    currentOrder.splice(dropIndex, 0, movedItem);
+    
+    this.columnOrder.set(currentOrder);
+    this.draggedColumnIndex.set(null);
+  }
+
+  protected onDragEnd(): void {
+    this.draggedColumnIndex.set(null);
+  }
+}

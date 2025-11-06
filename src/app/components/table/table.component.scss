@@ -148,7 +148,46 @@
 }
 
 .column-picker-list { padding: 6px; }
-.column-picker-item { display: flex; align-items: center; gap: 8px; padding: 6px; }
+.column-picker-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 6px;
+  cursor: grab;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  user-select: none;
+  
+  &:hover {
+    background-color: var(--table-row-hover-bg);
+  }
+  
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+  }
+  
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+  
+  span:not(.drag-handle) {
+    flex: 1;
+    cursor: pointer;
+  }
+}
+
+.drag-handle {
+  color: var(--table-muted-color);
+  font-size: 16px;
+  cursor: grab;
+  line-height: 1;
+  padding: 0 4px;
+  
+  .column-picker-item.dragging & {
+    cursor: grabbing;
+  }
+}
 
 .data-table {
   width: 100%;
