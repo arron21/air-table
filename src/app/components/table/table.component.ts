@@ -29,11 +29,26 @@ export class TableComponent<T = any> {
   externalSearchQuery = input<string | undefined>(undefined);
   externalFilter = input<((row: T) => boolean) | undefined>(undefined);
 
+  // Pagination inputs
+  enablePagination = input<boolean>(false);
+  pageSize = input<number>(10);
+  externalCurrentPage = input<number | undefined>(undefined);
+  externalTotalItems = input<number | undefined>(undefined);
+  loading = input<boolean>(false);
+  
+  // Pagination outputs
+  pageChange = output<number>();
+  
+  // Internal pagination state
+  private internalCurrentPage = signal<number>(1);
+
   // Internal search (used when externalSearchQuery is not provided)
   searchQuery = signal<string>('');
   searchColumn = signal<string | null>(null); // null means search all columns
-  private sortColumn = signal<keyof T | string | null>(null);
-  private sortDirection = signal<SortDirection>(null);
+  
+  // Sorting state - supports primary and secondary sorts
+  private primarySort = signal<{ column: keyof T | string; direction: 'asc' | 'desc' } | null>(null);
+  private secondarySort = signal<{ column: keyof T | string; direction: 'asc' | 'desc' } | null>(null);
   
   // Internal selection state (used when selectedRows is not provided)
   private internalSelectedRows = signal<Set<any>>(new Set());
@@ -118,42 +133,82 @@ export class TableComponent<T = any> {
       }
     }
 
-    // Apply sorting
-    const column = this.sortColumn();
-    const direction = this.sortDirection();
+    // Apply sorting (primary and secondary)
+    const primarySort = this.primarySort();
+    const secondarySort = this.secondarySort();
 
-    if (!column || !direction) {
+    if (!primarySort) {
       return dataArray;
     }
 
     return [...dataArray].sort((a, b) => {
-      const aValue = this.getNestedValue(a, column);
-      const bValue = this.getNestedValue(b, column);
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      // Handle Date objects
-      if (aValue instanceof Date && bValue instanceof Date) {
-        const diff = aValue.getTime() - bValue.getTime();
-        return direction === 'asc' ? diff : -diff;
+      // Primary sort comparison
+      const primaryResult = this.compareValues(a, b, primarySort.column, primarySort.direction);
+      
+      // If primary sort values are equal and we have a secondary sort, use it
+      if (primaryResult === 0 && secondarySort) {
+        return this.compareValues(a, b, secondarySort.column, secondarySort.direction);
       }
-
-      // Handle numbers
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      // Handle strings
-      const aStr = String(aValue).toLowerCase();
-      const bStr = String(bValue).toLowerCase();
-
-      if (direction === 'asc') {
-        return aStr.localeCompare(bStr);
-      } else {
-        return bStr.localeCompare(aStr);
-      }
+      
+      return primaryResult;
     });
+  });
+
+  // Pagination computed properties
+  protected readonly effectiveCurrentPage = computed(() => {
+    const external = this.externalCurrentPage();
+    return external !== undefined ? external : this.internalCurrentPage();
+  });
+
+  protected readonly totalItems = computed(() => {
+    const external = this.externalTotalItems();
+    return external !== undefined ? external : this.filteredAndSortedData().length;
+  });
+
+  protected readonly totalPages = computed(() => {
+    if (!this.enablePagination()) {
+      return 1;
+    }
+    return Math.ceil(this.totalItems() / this.pageSize());
+  });
+
+  protected readonly paginatedData = computed(() => {
+    const data = this.filteredAndSortedData();
+    
+    if (!this.enablePagination()) {
+      return data;
+    }
+
+    // If external pagination is being used, return data as-is since parent handles pagination
+    if (this.externalCurrentPage() !== undefined || this.externalTotalItems() !== undefined) {
+      return data;
+    }
+
+    // Internal pagination - slice the data
+    const currentPage = this.effectiveCurrentPage();
+    const size = this.pageSize();
+    const startIndex = (currentPage - 1) * size;
+    const endIndex = startIndex + size;
+    
+    return data.slice(startIndex, endIndex);
+  });
+
+  protected readonly pageInfo = computed(() => {
+    const currentPage = this.effectiveCurrentPage();
+    const totalPages = this.totalPages();
+    const pageSize = this.pageSize();
+    const totalItems = this.totalItems();
+    
+    const startItem = totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+    const endItem = Math.min(currentPage * pageSize, totalItems);
+    
+    return {
+      currentPage,
+      totalPages,
+      startItem,
+      endItem,
+      totalItems
+    };
   });
   
   constructor() {
@@ -161,7 +216,6 @@ export class TableComponent<T = any> {
       const allColumns = this.columns();
       const visibility = this.columnVisibility();
       const order = this.columnOrder();
-      console.log(this.visibleColumns());
       
       // Initialize visibility map if needed
       const needsInit = allColumns.some(col => !visibility.has(String(col.key)));
@@ -180,17 +234,43 @@ export class TableComponent<T = any> {
         this.columnOrder.set(allColumns.map(col => String(col.key)));
       }
     });
+
+    // Reset to first page when search/filter changes
+    effect(() => {
+      // Track search and filter changes
+      this.searchQuery();
+      this.searchColumn();
+      this.externalSearchQuery();
+      this.externalFilter();
+      
+      // Reset to first page when filters change (but not on initial load)
+      if (this.enablePagination() && this.externalCurrentPage() === undefined) {
+        this.internalCurrentPage.set(1);
+      }
+    });
   }
 
   sortIcon(column: ColumnDefinition<T>): string {
-    if (this.sortColumn() !== column.key) {
-      return '⇅';
+    const primarySort = this.primarySort();
+    const secondarySort = this.secondarySort();
+    
+    if (primarySort && primarySort.column === column.key) {
+      const icon = primarySort.direction === 'asc' ? '↑' : '↓';
+      return secondarySort ? `${icon}¹` : icon;
     }
-    return this.sortDirection() === 'asc' ? '↑' : '↓';
+    
+    if (secondarySort && secondarySort.column === column.key) {
+      return secondarySort.direction === 'asc' ? '↑²' : '↓²';
+    }
+    
+    return '⇅';
   }
 
   isSorted(column: ColumnDefinition<T>): boolean {
-    return this.sortColumn() === column.key && this.sortDirection() !== null;
+    const primarySort = this.primarySort();
+    const secondarySort = this.secondarySort();
+    return !!(primarySort && primarySort.column === column.key) || 
+           !!(secondarySort && secondarySort.column === column.key);
   }
 
   onSort(column: ColumnDefinition<T>): void {
@@ -198,21 +278,46 @@ export class TableComponent<T = any> {
       return;
     }
 
-    const currentColumn = this.sortColumn();
-    const currentDirection = this.sortDirection();
+    const primarySort = this.primarySort();
+    const secondarySort = this.secondarySort();
 
-    if (currentColumn === column.key) {
-      // Cycle through: asc -> desc -> null
-      if (currentDirection === 'asc') {
-        this.sortDirection.set('desc');
-      } else if (currentDirection === 'desc') {
-        this.sortColumn.set(null);
-        this.sortDirection.set(null);
+    // If clicking on the primary sort column
+    if (primarySort && primarySort.column === column.key) {
+      if (primarySort.direction === 'asc') {
+        // Change to descending
+        this.primarySort.set({ column: column.key, direction: 'desc' });
+      } else {
+        // Remove primary sort, promote secondary to primary if it exists
+        if (secondarySort) {
+          this.primarySort.set(secondarySort);
+          this.secondarySort.set(null);
+        } else {
+          this.primarySort.set(null);
+        }
       }
-    } else {
-      // New column, start with ascending
-      this.sortColumn.set(column.key);
-      this.sortDirection.set('asc');
+    }
+    // If clicking on the secondary sort column
+    else if (secondarySort && secondarySort.column === column.key) {
+      if (secondarySort.direction === 'asc') {
+        // Change to descending
+        this.secondarySort.set({ column: column.key, direction: 'desc' });
+      } else {
+        // Remove secondary sort
+        this.secondarySort.set(null);
+      }
+    }
+    // Clicking on a new column
+    else {
+      if (!primarySort) {
+        // No sorting yet, make this the primary sort
+        this.primarySort.set({ column: column.key, direction: 'asc' });
+      } else if (!secondarySort) {
+        // Primary exists but no secondary, make this the secondary sort
+        this.secondarySort.set({ column: column.key, direction: 'asc' });
+      } else {
+        // Both sorts exist, replace secondary with this new sort
+        this.secondarySort.set({ column: column.key, direction: 'asc' });
+      }
     }
   }
 
@@ -631,5 +736,86 @@ export class TableComponent<T = any> {
     }
     
     return null;
+  }
+
+  // Pagination methods
+  protected goToPage(page: number): void {
+    const totalPages = this.totalPages();
+    const validPage = Math.max(1, Math.min(page, totalPages));
+    
+    // Update internal state if not externally controlled
+    if (this.externalCurrentPage() === undefined) {
+      this.internalCurrentPage.set(validPage);
+    }
+    
+    // Emit page change
+    this.pageChange.emit(validPage);
+  }
+
+  protected goToFirstPage(): void {
+    this.goToPage(1);
+  }
+
+  protected goToLastPage(): void {
+    this.goToPage(this.totalPages());
+  }
+
+  protected goToPreviousPage(): void {
+    const currentPage = this.effectiveCurrentPage();
+    this.goToPage(currentPage - 1);
+  }
+
+  protected goToNextPage(): void {
+    const currentPage = this.effectiveCurrentPage();
+    this.goToPage(currentPage + 1);
+  }
+
+  protected getVisiblePageNumbers(): number[] {
+    const currentPage = this.effectiveCurrentPage();
+    const totalPages = this.totalPages();
+    const visibleCount = 5; // Show up to 5 page numbers
+    
+    if (totalPages <= visibleCount) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    let start = Math.max(1, currentPage - Math.floor(visibleCount / 2));
+    let end = Math.min(totalPages, start + visibleCount - 1);
+    
+    // Adjust start if we're near the end
+    if (end - start + 1 < visibleCount) {
+      start = Math.max(1, end - visibleCount + 1);
+    }
+    
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }
+
+  private compareValues(a: T, b: T, column: keyof T | string, direction: 'asc' | 'desc'): number {
+    const aValue = this.getNestedValue(a, column);
+    const bValue = this.getNestedValue(b, column);
+
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+
+    // Handle Date objects
+    if (aValue instanceof Date && bValue instanceof Date) {
+      const diff = aValue.getTime() - bValue.getTime();
+      return direction === 'asc' ? diff : -diff;
+    }
+
+    // Handle numbers
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    // Handle strings
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    if (direction === 'asc') {
+      return aStr.localeCompare(bStr);
+    } else {
+      return bStr.localeCompare(aStr);
+    }
   }
 }

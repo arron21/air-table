@@ -1,166 +1,102 @@
 <div class="app-container">
   <header>
     <h1>{{ title() }}</h1>
-    <p>Modern Angular Data Table with Internal and External Controls</p>
+    <p>Modern Angular Data Table Component</p>
   </header>
 
   <main>
     <section class="table-section">
-      <h2>Internal Controls (Built-in Search)</h2>
+      <h2>Control Mode Toggle</h2>
       <p class="section-description">
-        This table uses internal search and filtering. The search input is built into the table component.
-      </p>
-      <app-table [data]="users()" [columns]="columns" />
-    </section>
-
-    <section class="table-section">
-      <h2>External Controls (Parent-Managed Search & Filter)</h2>
-      <p class="section-description">
-        This table uses external search query and filter function controlled by the parent component.
-        The internal search UI is hidden when external controls are provided.
+        Switch between internal controls (built-in search) and external controls (parent-managed).
       </p>
       
-      <div class="external-controls">
-        <div class="control-group">
-          <label for="external-search">Search:</label>
-          <div class="search-wrapper">
-            <input
-              id="external-search"
-              type="text"
-              class="external-search-input"
-              placeholder="Search users..."
-              [value]="externalSearchQuery()"
-              (input)="onExternalSearchChange($any($event.target).value)"
-            />
-            @if (externalSearchQuery()) {
-              <button
-                type="button"
-                class="clear-external-search"
-                (click)="clearExternalSearch()"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            }
-          </div>
-        </div>
-        
-        <div class="control-group">
-          <label>
-            <input
-              type="checkbox"
-              [checked]="showActiveOnly()"
-              (change)="showActiveOnly.set($any($event.target).checked)"
-            />
-            Show active users only
-          </label>
-        </div>
-      </div>
-      
-      <app-table
-        [data]="users()"
-        [columns]="columns"
-        [externalSearchQuery]="externalSearchQuery()"
-        [externalFilter]="externalFilter()"
-      />
-    </section>
-
-    <section class="table-section">
-      <h2>External Controls with Apply Button</h2>
-      <p class="section-description">
-        This table uses external controls with an apply button pattern. Filters are only applied when the "Apply" button is clicked.
-        You can set up multiple filters before applying them.
-      </p>
-      
-      <div class="external-controls apply-pattern">
-        <div class="control-group">
-          <label for="pending-search">Search:</label>
-          <div class="search-wrapper">
-            <input
-              id="pending-search"
-              type="text"
-              class="external-search-input"
-              placeholder="Search users..."
-              [value]="pendingSearchQuery()"
-              (input)="onPendingSearchChange($any($event.target).value)"
-            />
-            @if (pendingSearchQuery()) {
-              <button
-                type="button"
-                class="clear-external-search"
-                (click)="clearPendingSearch()"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            }
-          </div>
-        </div>
-        
-        <div class="control-group">
-          <label>
-            <input
-              type="checkbox"
-              [checked]="pendingShowActiveOnly()"
-              (change)="pendingShowActiveOnly.set($any($event.target).checked)"
-            />
-            Show active users only
-          </label>
-        </div>
-
-        <div class="control-group actions">
-          <button
-            type="button"
-            class="apply-button"
-            [disabled]="!hasPendingChanges()"
-            (click)="applyFilters()"
-          >
-            Apply
-          </button>
-          <button
-            type="button"
-            class="reset-button"
-            [disabled]="!appliedSearchQuery() && !appliedShowActiveOnly()"
-            (click)="resetFilters()"
-          >
-            Reset
-          </button>
-        </div>
+      <div class="control-mode-toggle">
+        <button
+          type="button"
+          class="mode-toggle-button"
+          [class.active]="!useExternalControls()"
+          (click)="setControlMode(false)"
+        >
+          Internal Controls
+        </button>
+        <button
+          type="button"
+          class="mode-toggle-button"
+          [class.active]="useExternalControls()"
+          (click)="setControlMode(true)"
+        >
+          External Controls
+        </button>
       </div>
 
-      @if (hasPendingChanges()) {
-        <div class="pending-indicator">
-          <span class="pending-icon">⚠</span>
-          You have pending changes. Click "Apply" to update the table.
-        </div>
-      }
-
-      @if (appliedSearchQuery() || appliedShowActiveOnly()) {
-        <div class="applied-filters">
-          <strong>Applied filters:</strong>
-          <span class="filter-tag">
-            @if (appliedSearchQuery()) {
-              Search: "{{ appliedSearchQuery() }}"
-            }
-          </span>
-          @if (appliedShowActiveOnly()) {
-            <span class="filter-tag">Active users only</span>
-          }
+      @if (useExternalControls()) {
+        <div class="external-controls">
+          <div class="control-group">
+            <label for="toggle-search">Search:</label>
+            <div class="search-wrapper">
+              <input
+                id="toggle-search"
+                type="text"
+                class="external-search-input"
+                placeholder="Search users..."
+                [value]="toggleSearchQuery()"
+                (input)="onToggleSearchChange($any($event.target).value)"
+              />
+              @if (toggleSearchQuery()) {
+                <button
+                  type="button"
+                  class="clear-external-search"
+                  (click)="clearToggleSearch()"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              }
+            </div>
+          </div>
+          
+          <div class="control-group">
+            <label>
+              <input
+                type="checkbox"
+                [checked]="toggleShowActiveOnly()"
+                (change)="toggleShowActiveOnly.set($any($event.target).checked)"
+              />
+              Show active users only
+            </label>
+          </div>
         </div>
       }
       
       <app-table
         [data]="users()"
         [columns]="columns"
-        [externalSearchQuery]="appliedSearchQuery()"
-        [externalFilter]="appliedExternalFilter()"
+        [externalSearchQuery]="useExternalControls() ? toggleSearchQuery() : undefined"
+        [externalFilter]="useExternalControls() ? toggleExternalFilter() : undefined"
+        [enablePagination]="true"
+        [pageSize]="5"
       />
     </section>
 
     <section class="table-section">
-      <h2>Row Selection - Multiple Selection</h2>
+      <h2>Pagination</h2>
       <p class="section-description">
-        This table supports multiple row selection. Use checkboxes to select multiple rows. Click the header checkbox to select/deselect all visible rows.
+        Large datasets with pagination controls. Navigate between pages with customizable page sizes.
+      </p>
+      
+      <app-table
+        [data]="users()"
+        [columns]="columns"
+        [enablePagination]="true"
+        [pageSize]="3"
+      />
+    </section>
+
+    <section class="table-section">
+      <h2>Selection with Pagination</h2>
+      <p class="section-description">
+        Multiple row selection combined with pagination. Selections persist across pages.
       </p>
       
       @if (selectedUsers().length > 0) {
@@ -178,28 +114,69 @@
         [selectionMode]="'multiple'"
         [rowIdentifier]="getUserIdentifier"
         (selectionChange)="onSelectionChange($event)"
+        [enablePagination]="true"
+        [pageSize]="4"
       />
     </section>
 
     <section class="table-section">
-      <h2>Row Selection - Single Selection</h2>
+      <h2>Performance Demo - 10,000 Rows</h2>
       <p class="section-description">
-        This table supports single row selection. Use radio buttons to select one row at a time.
+        Large dataset with 10,000 randomly generated users. Demonstrates pagination performance with search, sorting, and filtering capabilities.
       </p>
       
-      @if (singleSelectedUser()) {
-        <div class="selection-info">
-          Selected user: <strong>{{ singleSelectedUser()?.name }}</strong>
-          ({{ singleSelectedUser()?.email }})
+      <div class="performance-stats">
+        <div class="stat-item">
+          <strong>{{ largeDataset().length.toLocaleString() }}</strong>
+          <span>Total Records</span>
         </div>
-      }
+        <div class="stat-item">
+          <strong>{{ activeUsersCount().toLocaleString() }}</strong>
+          <span>Active Users</span>
+        </div>
+        <div class="stat-item">
+          <strong>{{ uniqueRolesCount() }}</strong>
+          <span>Unique Roles</span>
+        </div>
+      </div>
       
       <app-table
-        [data]="users()"
+        [data]="largeDataset()"
         [columns]="columns"
-        [selectionMode]="'single'"
-        [rowIdentifier]="getUserIdentifier"
-        (selectionChange)="onSingleSelectionChange($event)"
+        [enablePagination]="true"
+        [pageSize]="25"
+      />
+    </section>
+
+    <section class="table-section">
+      <h2>External API Pagination</h2>
+      <p class="section-description">
+        Server-side pagination using JSONPlaceholder API. Pagination controls trigger API calls to fetch new data pages.
+      </p>
+      
+      <div class="api-info">
+        <div class="api-endpoint">
+          <strong>API Endpoint:</strong>
+          <code>https://jsonplaceholder.typicode.com/posts?_limit={{ postsPerPage }}&_start={{ (currentPage() - 1) * postsPerPage }}</code>
+        </div>
+        <div class="api-stats">
+          <span class="stat">Page {{ currentPage() }} of {{ totalPages() }}</span>
+          <span class="stat">{{ totalPosts() }} total posts</span>
+          @if (postsService.isLoading()) {
+            <span class="loading-indicator">🔄 Loading...</span>
+          }
+        </div>
+      </div>
+      
+      <app-table
+        [data]="posts()"
+        [columns]="postsColumns"
+        [enablePagination]="true"
+        [pageSize]="postsPerPage"
+        [externalCurrentPage]="currentPage()"
+        [externalTotalItems]="totalPosts()"
+        [loading]="postsService.isLoading()"
+        (pageChange)="onPostsPageChange($event)"
       />
     </section>
   </main>

@@ -2,7 +2,8 @@ import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TableComponent } from './components/table/table.component';
 import { ColumnDefinition } from './components/table/column-definition';
-import { dummyUsers, User } from './data/dummy-data';
+import { dummyUsers, User, generateLargeUserDataset } from './data/dummy-data';
+import { PostsService, Post } from './services/posts.service';
 
 @Component({
   selector: 'app-root',
@@ -11,16 +12,22 @@ import { dummyUsers, User } from './data/dummy-data';
   styleUrl: './app.scss'
 })
 export class App {
+  constructor(protected postsService: PostsService) {
+    // Initialize posts data
+    this.loadPosts();
+  }
   protected readonly title = signal('air-table');
   protected readonly users = signal(dummyUsers);
+  protected readonly largeDataset = signal(generateLargeUserDataset(10000));
   
-  // External search and filter controls
-  protected readonly externalSearchQuery = signal<string>('');
-  protected readonly showActiveOnly = signal<boolean>(false);
+  // Toggle control mode demo
+  protected readonly useExternalControls = signal<boolean>(false);
+  protected readonly toggleSearchQuery = signal<string>('');
+  protected readonly toggleShowActiveOnly = signal<boolean>(false);
   
-  // External filter function - filters by active status
-  protected readonly externalFilter = computed<((row: User) => boolean) | undefined>(() => {
-    if (this.showActiveOnly()) {
+  // Toggle external filter function
+  protected readonly toggleExternalFilter = computed<((row: User) => boolean) | undefined>(() => {
+    if (this.toggleShowActiveOnly()) {
       return (user: User) => user.status === 'active';
     }
     return undefined;
@@ -64,60 +71,26 @@ export class App {
     }
   ];
   
-  protected onExternalSearchChange(value: string): void {
-    this.externalSearchQuery.set(value);
-  }
-  
-  protected clearExternalSearch(): void {
-    this.externalSearchQuery.set('');
-  }
-
-  // Apply button pattern - temporary values and applied values
-  protected readonly pendingSearchQuery = signal<string>('');
-  protected readonly pendingShowActiveOnly = signal<boolean>(false);
-  
-  // Applied values (sent to table)
-  protected readonly appliedSearchQuery = signal<string>('');
-  protected readonly appliedShowActiveOnly = signal<boolean>(false);
-  
-  // Applied filter function
-  protected readonly appliedExternalFilter = computed<((row: User) => boolean) | undefined>(() => {
-    if (this.appliedShowActiveOnly()) {
-      return (user: User) => user.status === 'active';
+  // Toggle control mode methods
+  protected setControlMode(useExternal: boolean): void {
+    this.useExternalControls.set(useExternal);
+    // Clear toggle search when switching modes to avoid confusion
+    if (!useExternal) {
+      this.toggleSearchQuery.set('');
+      this.toggleShowActiveOnly.set(false);
     }
-    return undefined;
-  });
-
-  protected onPendingSearchChange(value: string): void {
-    this.pendingSearchQuery.set(value);
   }
 
-  protected clearPendingSearch(): void {
-    this.pendingSearchQuery.set('');
+  protected onToggleSearchChange(value: string): void {
+    this.toggleSearchQuery.set(value);
   }
 
-  protected applyFilters(): void {
-    this.appliedSearchQuery.set(this.pendingSearchQuery());
-    this.appliedShowActiveOnly.set(this.pendingShowActiveOnly());
+  protected clearToggleSearch(): void {
+    this.toggleSearchQuery.set('');
   }
-
-  protected resetFilters(): void {
-    this.pendingSearchQuery.set('');
-    this.pendingShowActiveOnly.set(false);
-    this.appliedSearchQuery.set('');
-    this.appliedShowActiveOnly.set(false);
-  }
-
-  protected readonly hasPendingChanges = computed(() => {
-    return (
-      this.pendingSearchQuery() !== this.appliedSearchQuery() ||
-      this.pendingShowActiveOnly() !== this.appliedShowActiveOnly()
-    );
-  });
 
   // Selection examples
   protected readonly selectedUsers = signal<User[]>([]);
-  protected readonly singleSelectedUser = signal<User | undefined>(undefined);
 
   protected readonly selectedUserNames = computed(() => {
     return this.selectedUsers().map(u => u.name).join(', ');
@@ -127,9 +100,65 @@ export class App {
     this.selectedUsers.set(selected);
   }
 
-  protected onSingleSelectionChange(selected: User[]): void {
-    this.singleSelectedUser.set(selected[0]);
+  protected getUserIdentifier = (user: User): number => user.id;
+
+  // Large dataset statistics
+  protected readonly activeUsersCount = computed(() => {
+    return this.largeDataset().filter(u => u.status === 'active').length;
+  });
+
+  protected readonly uniqueRolesCount = computed(() => {
+    return new Set(this.largeDataset().map(u => u.role)).size;
+  });
+
+  // External pagination demo with API
+  protected readonly posts = signal<Post[]>([]);
+  protected readonly currentPage = signal<number>(1);
+  protected readonly totalPosts = signal<number>(0);
+  protected readonly postsPerPage = 10;
+  
+  protected readonly totalPages = computed(() => {
+    return Math.ceil(this.totalPosts() / this.postsPerPage);
+  });
+
+  protected readonly postsColumns: ColumnDefinition<Post>[] = [
+    {
+      key: 'id',
+      header: 'ID',
+      sortable: false
+    },
+    {
+      key: 'title',
+      header: 'Title',
+      sortable: false
+    },
+    {
+      key: 'body',
+      header: 'Content',
+      sortable: false
+    },
+    {
+      key: 'userId',
+      header: 'User ID',
+      sortable: false
+    }
+  ];
+
+  private async loadPosts(): Promise<void> {
+    try {
+      const response = await this.postsService.fetchPosts(this.currentPage(), this.postsPerPage);
+      this.posts.set(response.posts);
+      this.totalPosts.set(response.total);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      // Set empty state on error
+      this.posts.set([]);
+      this.totalPosts.set(0);
+    }
   }
 
-  protected getUserIdentifier = (user: User): number => user.id;
+  protected async onPostsPageChange(page: number): Promise<void> {
+    this.currentPage.set(page);
+    await this.loadPosts();
+  }
 }

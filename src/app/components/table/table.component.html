@@ -173,7 +173,7 @@
           </td>
         </tr>
       } @else {
-        @for (row of filteredAndSortedData(); track getRowId(row)) {
+        @for (row of paginatedData(); track getRowId(row)) {
           <tr [class.selected]="isRowSelected(row)">
             @if (selectionMode() !== 'none') {
               <td class="selection-cell">
@@ -213,5 +213,77 @@
       }
     </tbody>
   </table>
+
+  @if (enablePagination() && totalPages() > 1) {
+    <div class="pagination-container">
+      <div class="pagination-info">
+        Showing {{ pageInfo().startItem }} to {{ pageInfo().endItem }} of {{ pageInfo().totalItems }} entries
+      </div>
+      
+      <div class="pagination-controls">
+        <button
+          type="button"
+          class="pagination-button"
+          [disabled]="pageInfo().currentPage === 1 || loading()"
+          (click)="goToFirstPage()"
+          aria-label="Go to first page"
+        >
+          «
+        </button>
+        
+        <button
+          type="button"
+          class="pagination-button"
+          [disabled]="pageInfo().currentPage === 1 || loading()"
+          (click)="goToPreviousPage()"
+          aria-label="Go to previous page"
+        >
+          ‹
+        </button>
+        
+        @for (pageNum of getVisiblePageNumbers(); track pageNum) {
+          <button
+            type="button"
+            class="pagination-button"
+            [class.active]="pageNum === pageInfo().currentPage"
+            [disabled]="loading()"
+            (click)="goToPage(pageNum)"
+            [attr.aria-label]="'Go to page ' + pageNum"
+          >
+            {{ pageNum }}
+          </button>
+        }
+        
+        <button
+          type="button"
+          class="pagination-button"
+          [disabled]="pageInfo().currentPage === pageInfo().totalPages || loading()"
+          (click)="goToNextPage()"
+          aria-label="Go to next page"
+        >
+          ›
+        </button>
+        
+        <button
+          type="button"
+          class="pagination-button"
+          [disabled]="pageInfo().currentPage === pageInfo().totalPages || loading()"
+          (click)="goToLastPage()"
+          aria-label="Go to last page"
+        >
+          »
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+      </div>
+    </div>
+  }
 </div>
 

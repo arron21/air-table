@@ -9,6 +9,7 @@ This is a modern Angular 20 standalone application showcasing a configurable dat
 - **Location**: `src/app/components/table/`
 - **Generic component** supporting any data type via `ColumnDefinition<T>`
 - **Dual control modes**: Internal controls (built-in search/filter) vs External controls (parent-managed)
+- **Multi-chip search**: Create multiple search filters as chips, each targeting specific columns or all columns
 - **Column-specific search**: Dropdown to search across all columns or filter by specific column
 - **Selection patterns**: `none`, `single`, `multiple` with controlled/uncontrolled state
 - **Column visibility & ordering**: Dynamic show/hide with drag-and-drop reordering in picker dropdown
@@ -52,6 +53,7 @@ Follows controlled/uncontrolled pattern:
 - **Controlled**: Parent provides `selectedRows` input and handles `selectionChange` output
 - **Uncontrolled**: Table manages internal `internalSelectedRows` signal
 - **Row identification**: Optional `rowIdentifier` function for complex objects
+- **Filter reset**: Selections automatically reset when search/filter criteria change
 
 ## Development Workflows
 
@@ -100,6 +102,7 @@ src/app/
 - **External filtering**: Implement `(row: T) => boolean` function and pass to `externalFilter`
 - **Selection handling**: Listen to `selectionChange` output and manage parent state
 - **Column reordering**: Use drag-and-drop in column picker - order persists via `columnOrder` signal
+- **Multi-chip search**: Press Enter or click + to convert search queries into persistent filter chips
 - **Column-specific search**: Set `searchColumn` signal to filter by specific column key
 
 When extending this table component, maintain the signal-based architecture and dual control mode pattern for maximum flexibility.

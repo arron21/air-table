@@ -48,6 +48,41 @@
     }
   }
 
+  .control-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 4px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    width: fit-content;
+
+    .mode-toggle-button {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #374151;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      &.active {
+        background: white;
+        color: #1f2937;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        font-weight: 600;
+      }
+    }
+  }
+
   .external-controls {
     display: flex;
     gap: 24px;
@@ -250,6 +285,113 @@
     .selected-names {
       font-style: italic;
       opacity: 0.9;
+    }
+  }
+
+  .performance-stats {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    flex-wrap: wrap;
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      min-width: 120px;
+
+      strong {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 4px;
+        color: white;
+      }
+
+      span {
+        font-size: 13px;
+        opacity: 0.9;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stat-item {
+        min-width: 100px;
+        
+        strong {
+          font-size: 24px;
+        }
+        
+        span {
+          font-size: 12px;
+        }
+      }
+    }
+  }
+
+  .api-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+
+    .api-endpoint {
+      margin-bottom: 12px;
+      
+      strong {
+        display: block;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        color: #374151;
+        margin-bottom: 4px;
+      }
+      
+      code {
+        display: block;
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+
+    .api-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+      .stat {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+
+      .loading-indicator {
+        color: #3b82f6;
+        font-weight: 600;
+        font-size: 13px;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
   }
 }
